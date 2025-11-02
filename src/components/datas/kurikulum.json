@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "nama_mk": "Matematika Diskrit",
+        "sks": 3,
+        "semester": 1
+    },
+    {
+        "id": 2,
+        "nama_mk": "Matematika Murni",
+        "sks": 3,
+        "semester": 1
+    },
+    {
+        "id": 3,
+        "nama_mk": "Logika Infomatika",
+        "sks": 3,
+        "semester": 1
+    }
+]

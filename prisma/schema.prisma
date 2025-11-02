@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Mahasiswa {
+  id_mhs     String   @id @default(uuid()) @map("id_mhs")
+  nama_mhs   String
+  nim        String   @unique
+  created_at DateTime @default(now())
+  update_at  DateTime @default(now()) @updatedAt
+
+  krs Krs[]
+
+  @@map("mahasiswa")
+}
+
+model Krs {
+  id_krs         String    @id @default(uuid()) @map("id_krs")
+  mahasiswa      Mahasiswa @relation(fields: [nim], references: [nim])
+  nim            String
+  tahun_akademik String
+  semester       String
+  created_at     DateTime  @default(now())
+  update_at      DateTime  @default(now()) @updatedAt
+
+  KrsDetail KrsDetail[]
+  Khs       Khs?
+
+  @@map("krs")
+}
+
+model Matakuliah {
+  id_mk           String   @id @default(uuid()) @map("id_mk")
+  kode_mk         String   @unique
+  nama_matakuliah String
+  created_at      DateTime @default(now())
+  update_at       DateTime @default(now()) @updatedAt
+
+  KrsDetail     KrsDetail[]
+  Kelas         Kelas[]
+  sumatifPersen SumatifPersen[]
+
+  @@map("matakuliah")
+}
+
+model KrsDetail {
+  id_krs_detail String   @id @default(uuid()) @map("id_krs_detail")
+  krsId         String
+  mkId          String
+  created_at    DateTime @default(now())
+  update_at     DateTime @default(now()) @updatedAt
+
+  KhsDetail      KhsDetail[]
+  KelasMahasiswa KelasMahasiswa[]
+
+  krs        Krs        @relation(fields: [krsId], references: [id_krs])
+  matakuliah Matakuliah @relation(fields: [mkId], references: [id_mk])
+
+  @@map("krsdetail")
+}
+
+model Khs {
+  id_khs     String   @id @default(uuid()) @map("id_khs")
+  krsId      String   @unique
+  created_at DateTime @default(now())
+  update_at  DateTime @default(now()) @updatedAt
+
+  krs Krs @relation(fields: [krsId], references: [id_krs])
+
+  @@map("khs")
+}
+
+model KhsDetail {
+  id_khs_detail String   @id @default(uuid()) @map("id_khs_detail")
+  krsDetailId   String
+  nilai         Int
+  created_at    DateTime @default(now())
+  update_at     DateTime @default(now()) @updatedAt
+
+  krsDetail KrsDetail @relation(fields: [krsDetailId], references: [id_krs_detail])
+
+  sumatifNilaiAwal SumatifNilaiAwal[]
+
+  @@map("khsDetail")
+}
+
+model Kelas {
+  id_kelas        String        @id @default(uuid()) @map("id_kelas")
+  nama_kelas      String        @unique
+  validasi        Boolean
+  matakuliah      Matakuliah    @relation(fields: [mkId], references: [id_mk])
+  mkId            String
+  semester        Int
+  thn_akademik    String
+  sumatifPersen   SumatifPersen @relation(fields: [sumatifPersenId], references: [id])
+  sumatifPersenId String
+  created_at      DateTime      @default(now())
+  update_at       DateTime      @default(now()) @updatedAt
+
+  KelasDosen     KelasDosen[]
+  KelasMahasiswa KelasMahasiswa[]
+
+  @@map("kelas")
+}
+
+model Dosen {
+  id_dosen   String   @id @default(uuid()) @map("id_dosen")
+  nik        String   @unique
+  nama_dosen String
+  password   String
+  is_online  Boolean
+  created_at DateTime @default(now())
+  update_at  DateTime @default(now()) @updatedAt
+
+  KelasDosen KelasDosen[]
+
+  @@map("dosen")
+}
+
+model KelasDosen {
+  id_kelas_dosen String   @id @default(uuid()) @map("id_kelas_dosen")
+  dosen          Dosen    @relation(fields: [dosenId], references: [id_dosen])
+  dosenId        String
+  kelas          Kelas    @relation(fields: [kelasId], references: [id_kelas], onDelete: Cascade, onUpdate: Cascade)
+  kelasId        String
+  created_at     DateTime @default(now())
+  update_at      DateTime @default(now()) @updatedAt
+
+  @@map("kelasDosen")
+}
+
+model KelasMahasiswa {
+  id_kelas_mahasiswa String    @id @default(uuid()) @map("id_kelas_mahasiswa")
+  KrsDetail          KrsDetail @relation(fields: [krsDetailId], references: [id_krs_detail])
+  kelas              Kelas     @relation(fields: [kelasId], references: [id_kelas], onDelete: Cascade, onUpdate: Cascade)
+  krsDetailId        String
+  kelasId            String
+  created_at         DateTime  @default(now())
+  update_at          DateTime  @default(now()) @updatedAt
+
+  @@map("kelasMahasiswa")
+}
+
+model SumatifPersen {
+  id       String          @id @default(uuid())
+  nama     String
+  bobot    Int
+  parentId String?
+  parent   SumatifPersen?  @relation("ParentChild", fields: [parentId], references: [id])
+  children SumatifPersen[] @relation("ParentChild")
+
+  mkId       String
+  matakuliah Matakuliah @relation(fields: [mkId], references: [id_mk])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  sumatifNilaiAwal SumatifNilaiAwal[]
+  kelas            Kelas[]
+
+  @@map("sumatifPersen")
+}
+
+model SumatifNilaiAwal {
+  id              String        @id @default(uuid()) @map("id")
+  sumatifPersen   SumatifPersen @relation(fields: [sumatifPersenId], references: [id])
+  sumatifPersenId String
+  KhsDetail       KhsDetail     @relation(fields: [khsDetailId], references: [id_khs_detail])
+  khsDetailId     String
+  nilai           Int
+  created_at      DateTime      @default(now())
+  update_at       DateTime      @default(now()) @updatedAt
+
+  @@map("sumatifNilaiAwal")
+}

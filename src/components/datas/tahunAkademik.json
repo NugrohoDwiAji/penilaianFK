@@ -1,0 +1,32 @@
+[
+  {
+    "id": "1",
+    "tahun": "2022/2023",
+    "semester": "ganjil"
+  },
+  {
+    "id": "2",
+    "tahun": "2022/2023",
+    "semester": "genap"
+  },
+  {
+    "id": "3",
+    "tahun": "2023/2024",
+    "semester": "ganjil"
+  },
+  {
+    "id": "4",
+    "tahun": "2023/2024",
+    "semester": "genap"
+  },
+  {
+    "id": "5",
+    "tahun": "2024/2025",
+    "semester": "ganjil"
+  },
+  {
+    "id": "6",
+    "tahun": "2024/2025",
+    "semester": "genap"
+  }
+]
