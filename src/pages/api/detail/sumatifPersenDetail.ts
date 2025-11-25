@@ -5,11 +5,10 @@ import { response } from "../componnents/response";
 
 const handleGetMethode = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
-    const { id } = req.query;
+    const { id, mkId } = req.query;
     const leafNodes = await prisma.sumatifPersen.findMany({
-      where: {
-        parentId: id as string,
-      },
+      where: id === "undefined" ? {mkId:mkId as string} : {parentId:id as string},
+      orderBy:{bobot:"asc"},
       include: {
         matakuliah: {
           select: {

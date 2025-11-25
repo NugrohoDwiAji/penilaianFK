@@ -2,15 +2,13 @@ import { useState } from "react";
 import { Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Item = {
-  nama_dosen: string;
-  nik: string;
-  id_dosen: string;
+  nama_mhs: string;
+  nim: string;
+  id_mhs: string;
 };
 type Props = {
-  judulNip: string;
   data: Item[];
 };
-
 const colors = [
   "bg-blue-100 text-blue-800",
   "bg-green-100 text-green-800",
@@ -18,7 +16,12 @@ const colors = [
   "bg-purple-100 text-purple-800",
 ];
 
-export default function Table({ judulNip, data }: Props) {
+function capitalizeWords(text: string) {
+  if (!text) return "";
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+export default function TableMhs({ data }: Props) {
   const [viewPerPage, setviewPerPage] = useState(5);
   const [currentPage, setcurrentPage] = useState(1);
 
@@ -29,6 +32,7 @@ export default function Table({ judulNip, data }: Props) {
   const startIndex = (currentPage - 1) * viewPerPage;
   const endIndex = startIndex + viewPerPage;
   const currentData = data.slice(startIndex, endIndex);
+  
 
   return (
     <div>
@@ -55,7 +59,7 @@ export default function Table({ judulNip, data }: Props) {
           <tr className="border-y border-gray-200 text-gray-500">
             <th className="py-1 px-4 font-semibold text-sm">No</th>
             <th className="font-semibold text-sm w-xl text-left">Name</th>
-            <th className="font-semibold text-sm w-52 text-left">{judulNip}</th>
+            <th className="font-semibold text-sm w-52 text-center">NIM</th>
             <th className="font-semibold text-sm w-40 text-left">Action</th>
           </tr>
         </thead>
@@ -66,11 +70,11 @@ export default function Table({ judulNip, data }: Props) {
               className="border-y border-gray-200 text-gray-600 text-md "
             >
               <td className="p-1 px-4">{startIndex + index + 1}</td>
-              <td>{item.nama_dosen}</td>
-              <td><h1 className={`w-fit h-fit px-2 rounded-full ${colors[index%colors.length]}`}>{item.nik}</h1></td>
-              <td className="flex gap-2">
+              <td>{capitalizeWords(item.nama_mhs)}</td>
+              <td className="flex justify-center py-1"> <h1 className={`${colors[index % colors.length] } px-2 h-fit w-fit rounded-lg text-sm `}>{item.nim}</h1></td>
+              <td className="">
                 <button
-                  onClick={() => handleDelete(item.id_dosen)}
+                  onClick={() => handleDelete(item.id_mhs)}
                   className="text-red-600 p-1 hover:scale-105 hover:shadow-lg hover:cursor-pointer rounded"
                 >
                   <Trash2 className="" size={18} />

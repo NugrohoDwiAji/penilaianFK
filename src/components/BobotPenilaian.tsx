@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Kurikulum from "../../components/datas/kurikulum.json";
 import { Plus } from "lucide-react";
 import FormBobot from "@/components/organisms/FormBobot";
 import axios from "axios";
@@ -8,6 +7,7 @@ import axios from "axios";
 type Penilaian = {
   nama: string;
   bobot: number;
+  list:number;
   mkId?: string;
   children: Penilaian[];
 };
@@ -19,14 +19,6 @@ type Matakuliah = {
   update_at: string;
 };
 
-const tahunAkademik = [
-  { id: 1, tahun: "2022/2023", semester: "ganjil" },
-  { id: 2, tahun: "2022/2023", semester: "genap" },
-  { id: 3, tahun: "2023/2024", semester: "ganjil" },
-  { id: 4, tahun: "2023/2024", semester: "genap" },
-  { id: 5, tahun: "2024/2025", semester: "ganjil" },
-  { id: 6, tahun: "2024/2025", semester: "genap" },
-];
 
 export default function BobotPenilaian() {
   const [penilaian, setPenilaian] = useState<Penilaian[]>([]);
@@ -47,20 +39,22 @@ export default function BobotPenilaian() {
   const addRootPenilaian = () => {
     setPenilaian([
       ...penilaian,
-      { nama: "", bobot: 0, mkId: selectedMk, children: [] },
+      { nama: "", bobot: 0, list:0, mkId: selectedMk, children: [] },
     ]);
   };
 
   // 🔹 Tambah sub-penilaian berdasarkan path index
-  const handleAddChild = (path: number[]) => {
+  const handleAddChild = (path: number[], list:number) => {
     const newData = structuredClone(penilaian);
     let node: Penilaian = newData[path[0]];
     for (let i = 1; i < path.length; i++) {
       node = node.children[path[i]];
+
     }
     node.children.push({
       nama: "",
       bobot: 0,
+      list:list,
       mkId: selectedMk,
       children: [],
     });
@@ -138,7 +132,7 @@ export default function BobotPenilaian() {
       <FormBobot
         data={node}
         onChange={(key, val) => handleChange(path, key, val)}
-        addSub={() => handleAddChild(path)}
+        addSub={() => handleAddChild(path, node.children.length + 1)}
         delSub={() => handleDelChild(path)}
       />
       {node.children.map((child, i) => renderNode(child, [...path, i]))}
@@ -151,17 +145,9 @@ export default function BobotPenilaian() {
 
   return (
     <div className="flex flex-col gap-5">
-      <select className="border p-2 rounded-lg focus:ring-1 focus:ring-blue-900">
-        <option value="">--- Pilih Tahun Akademik ---</option>
-        {tahunAkademik.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.tahun}-{item.semester}
-          </option>
-        ))}
-      </select>
 
       <select
-        className="border p-2 rounded-lg focus:ring-1 focus:ring-blue-900"
+        className="border p-2 rounded-lg focus:ring-1 focus:ring-blue-900 w-fit"
         onChange={(e) => setSelectedMk(e.target.value)}
       >
         <option value="">--- Pilih Matakuliah ---</option>
@@ -173,9 +159,9 @@ export default function BobotPenilaian() {
       </select>
 
       <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold text-gray-500">
+        {/* <h1 className="text-lg font-semibold text-gray-500">
           Set Up Bobot Penilaian
-        </h1>
+        </h1> */}
         <button
           onClick={addRootPenilaian}
           className="flex items-center gap-2 bg-blue-900 text-white px-4 py-2 rounded-lg"

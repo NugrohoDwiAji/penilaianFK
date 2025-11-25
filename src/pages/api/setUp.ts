@@ -6,6 +6,7 @@ import { response } from "./componnents/response";
 type SumatifNode = {
   nama: string;
   bobot: number;
+  list:number;
   children: SumatifNode[];
   mkId: string;
 };
@@ -15,11 +16,12 @@ const createRecrusive = (
   mkId: string,
   parentId: string | null = null
 ): Prisma.SumatifPersenCreateInput => {
-  const { nama, bobot, children } = node;
+  const { nama, bobot, children,list } = node;
 
   return {
     nama,
     bobot,
+    list,
     parent: parentId ? { connect: { id: parentId } } : undefined,
     matakuliah: {
       connect: {

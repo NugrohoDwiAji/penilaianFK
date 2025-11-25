@@ -1,26 +1,24 @@
 import Image from "next/image";
 import React from "react";
 import {
-  PanelLeft,
-  Box,
+  House,
   SlidersHorizontal,
   FileText,
   FilePen,
   Landmark,
+  CircleUserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 const menu = [
   {
     title: "Dashboard",
-    icon: <Box size={20} />,
+    icon: <House size={20} />,
     link: "/admin/dashboard",
-  },
-  {
-    title: "Set Up ",
-    icon: <SlidersHorizontal size={20} />,
-    link: "/admin/setUp",
   },
   {
     title: "Kurikulum",
@@ -28,68 +26,62 @@ const menu = [
     link: "/admin/kurikulum",
   },
   {
-    title: "Penilaian",
-    icon: <FilePen size={20} />,
-    link: "/admin/penilaian",
+    title: "Set Up ",
+    icon: <SlidersHorizontal size={20} />,
+    link: "/admin/setUp",
   },
   {
     title: "Kelas",
     icon: <Landmark size={20} />,
     link: "/admin/kelas",
-    // subMenu: [
-    //   {
-    //     title: "Kelas",
-    //     icon: <Landmark size={20} />,
-    //     link: "#",
-    //   },
-    //   {
-    //     title: "Kelas Mahasiswa",
-    //     icon: <Landmark size={20} />,
-    //     link: "#",
-    //   },
-    //   {
-    //     title: "Kelas Dosen",
-    //     icon: <Landmark size={20} />,
-    //     link: "#",
-    //   },
-    // ],
+  },
+  {
+    title: "Penilaian",
+    icon: <FilePen size={20} />,
+    link: "/admin/penilaian",
   },
 ];
 
 export default function Sidebar() {
   const [isActive, setisActive] = useState(false);
-  const [subMenuIsOpen, setSubMenuIsOpen] = useState(true);
+  const { data: session } = useSession();
+
+  async function handleSignOut() {
+    await signOut({ callbackUrl: "/login" });
+  }
+
+  const pathname = usePathname();
 
   return (
-    <div className="bg-white fixed top-0 left-0 bottom-0 w-52">
+    <div className="bg-white fixed top-0 left-0 bottom-0 w-52 shadow-lg flex flex-col justify-between">
+      <div>
       <div className="flex justify-between items-center px-3 pt-5">
-        <div className="ml-5">
+        <div className="">
           <Image
-            src="/img/sipfk.png"
-            width={60}
-            height={60}
+            src="/img/ubg.png"
+            width={40}
+            height={40}
             alt="logo"
             className=""
           />
         </div>
-        <div className="text-gray-400">
-          <PanelLeft size={32} />
-        </div>
       </div>
-      <div className="px-6 pt-5 w-full ">
-        <h1 className="text-gray-600">Main</h1>
+      <div className="px-2 pt- w-full ">
+        <h1 className="text-gray-400 text-xs font-semibold">NAVIGATION</h1>
         <div
-          className={`py-2 rounded-lg px-2 ${
+          className={` rounded-lg px-1 ${
             isActive ? "text-gray-900" : "text-gray-500"
-          } flex flex-col gap-4 `}
+          } flex flex-col `}
         >
           {menu.map((item) => (
             <div key={item.title}>
               <Link
                 href={item.link}
                 key={item.title}
-                className={`flex gap-2 font-semibold text-sm items-center ${
-                  item.title == "Kelas" ? "flex-col items-start" : ""
+                className={`flex font-semibold text-sm items-center px-2 py-1 my-1 transition-all ease-in-out duration-300 hover:cursor-pointer hover:scale-110 hover:shadow-lg hover:bg-gray-200 hover:text-gray-900 hover:rounded-lg ${
+                  pathname === item.link
+                    ? "text-gray-900 bg-gray-200 rounded-lg "
+                    : "text-gray-500"
                 }`}
               >
                 <section className="flex gap-2">
@@ -115,6 +107,24 @@ export default function Sidebar() {
           ))}
         </div>
       </div>
+      </div>
+        <div className="">
+          <div className="flex justify-between px-3">
+
+          <button className="text-sm text-gray-700 border rounded-full bg-gray-100 border-gray-400 h-8 w-8">?</button>
+          <button className="bg-gray-100 border-gray-400 border text-gray-700 text-sm font-semibold w-fit px-5 py-1 rounded-full mb-2 hover:scale-110 hover:shadow-lg hover:cursor-pointer ease-in-out transition-all duration-300" onClick={handleSignOut}>Sign Out</button>
+          </div>
+          <div className="flex items-center gap-2 text-gray-400 border-t px-5 py-3 w-full ">
+            <CircleUserRound size={32} />
+            <h1 className="text-[10px] flex flex-col ">
+              <section className="text-sm text-gray-800 ">
+
+              {session?.user?.name}
+              </section>
+            {session?.user?.email}
+            </h1>
+          </div>
+        </div>
     </div>
   );
 }

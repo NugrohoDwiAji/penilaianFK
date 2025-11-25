@@ -3,6 +3,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { RefreshCw } from "lucide-react";
 
+
+
 type Data = {
   nama_dosen: string;
   nik: string;
@@ -26,7 +28,6 @@ export default function Dosen() {
     handleGetDosen();
   }, []);
 
-  console.log(dataDosen);
 
   return (
     <div className="">

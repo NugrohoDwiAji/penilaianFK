@@ -6,12 +6,10 @@
 
 generator client {
   provider = "prisma-client-js"
-  // output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model Mahasiswa {
@@ -45,6 +43,7 @@ model Matakuliah {
   id_mk           String   @id @default(uuid()) @map("id_mk")
   kode_mk         String   @unique
   nama_matakuliah String
+  Kurikulum String
   created_at      DateTime @default(now())
   update_at       DateTime @default(now()) @updatedAt
 
@@ -104,8 +103,8 @@ model Kelas {
   mkId            String
   semester        Int
   thn_akademik    String
-  sumatifPersen   SumatifPersen @relation(fields: [sumatifPersenId], references: [id])
-  sumatifPersenId String
+  sumatifPersen   SumatifPersen? @relation(fields: [sumatifPersenId], references: [id])
+  sumatifPersenId String?
   created_at      DateTime      @default(now())
   update_at       DateTime      @default(now()) @updatedAt
 
@@ -125,8 +124,20 @@ model Dosen {
   update_at  DateTime @default(now()) @updatedAt
 
   KelasDosen KelasDosen[]
+  User User?
 
   @@map("dosen")
+}
+
+model User{
+  id String @id @default(uuid()) @map("id")
+  dosen Dosen @relation(fields: [dosenId], references: [id_dosen])
+  dosenId String @unique
+  email String @unique
+  password String
+  role String @default("dosen")
+  created_at DateTime @default(now())
+  update_at DateTime @default(now()) @updatedAt
 }
 
 model KelasDosen {
@@ -163,6 +174,7 @@ model SumatifPersen {
 
   mkId       String
   matakuliah Matakuliah @relation(fields: [mkId], references: [id_mk])
+  list Int
 
   created_at DateTime @default(now())
   updated_at DateTime @default(now()) @updatedAt

@@ -1,20 +1,10 @@
 "use client";
 import axios from "axios";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Pen, Trash2, Save } from "lucide-react";
+import { Pen, Save } from "lucide-react";
+import { useDebouncedCallback } from "use-debounce";
 
-function toPascalCase(text: string): string {
-  return text
-    .split("-") // pisahkan berdasarkan tanda "-"
-    .map(part =>
-      part
-        .split(" ") // pisahkan kata di dalamnya
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-        .join("") // gabung kata tanpa spasi
-    )
-    .join("-"); // gabung kembali dengan tanda "-"
-}
 
 const colors = [
   "bg-blue-100 text-blue-800",
@@ -23,212 +13,233 @@ const colors = [
   "bg-purple-100 text-purple-800",
 ];
 
+type DataKomponen = { id: string; nama: string; bobot: number };
+type NilaiItem = { id: string; sumatifId: string; nama: string; nilai: number };
+type MahasiswaItem = { nama: string; nim: string; nilai: NilaiItem[] };
 type DataSumatifNilai = {
+  id_kelas: string;
   nama_kelas: string;
   semester: number;
   thn_akademik: string;
-  KelasMahasiswa: [
-    {
-      KrsDetail: {
-        KhsDetail: [{ nilai: number; id: string }];
-        krs: { mahasiswa: { nim: string; nama_mhs: string } };
-      };
-    }
-  ];
+  mahasiswa: MahasiswaItem[];
 };
 
-type DataKomponen = { id: string; nama: string; bobot: number };
+function capitalizeWords(text: string) {
+  if (!text) return "";
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+
+
+// ✅ Komponen Baris Dipisah & Di-Memo
+const TableRow = React.memo(
+  ({
+    item,
+    index,
+    isEditMode,
+    handleChangeNilai,
+    nilaiState,
+  }: {
+    item: MahasiswaItem;
+    index: number;
+    isEditMode: boolean;
+    handleChangeNilai: (key: string, val: number) => void;
+    nilaiState: { [key: string]: number };
+  }) => {
+    const colorClass = colors[index % colors.length];
+    return (
+      <tr className="border-b-2 border-gray-100 text-gray-700 text-base">
+        <td className="p-2 text-center">{index + 1}</td>
+        <td>
+          <h1
+            className={`w-fit h-fit py-1 px-3 text-xs rounded-full font-semibold ${colorClass}`}
+          >
+            {item.nim}
+          </h1>
+        </td>
+        <td>{capitalizeWords(item.nama)}</td>
+        {item.nilai.map((n, i) => {
+          const key = `${index}-${i}`;
+          const currentValue = nilaiState[key] ?? n.nilai;
+          return (
+            <td key={i} className="p-2 text-center">
+              {isEditMode ? (
+                <input
+                  type="number"
+                  value={currentValue}
+                  min="0"
+                  max="100"
+                  onChange={(e) =>
+                    handleChangeNilai(key, Number(e.target.value))
+                  }
+                  className="border border-gray-300 rounded p-1 w-16 text-center"
+                />
+              ) : (
+                currentValue
+              )}
+            </td>
+          );
+        })}
+      </tr>
+    );
+  }
+);
+
+TableRow.displayName = "TableRow";
 
 export default function TabelPenilaian() {
   const router = useRouter();
-  const { nama,mkId, id } = router.query;
-  const [dataNilai, setdataNilai] = useState<DataSumatifNilai[]>([]);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const { mkId, id } = router.query;
+
+  const [dataNilai, setDataNilai] = useState<DataSumatifNilai[]>([]);
+  const [komponenPenilaian, setKomponenPenilaian] = useState<DataKomponen[]>([]);
   const [nilai, setNilai] = useState<{ [key: string]: number }>({});
-  const [komonenPenilaian, setKomonenPenilaian] = useState<DataKomponen[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  function capitalizeWords(text: string) {
-    return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
-  }
+  // ✅ Gunakan useCallback biasa untuk state update
+  const handleChangeNilaiImmediate = useCallback((key: string, val: number) => {
+    setNilai((prev) => ({ ...prev, [key]: val }));
+  }, []);
 
-  const handleGetKomponen = async () => {
-    if (router.isReady) {
-      try {
-        await axios
-          .get(`/api/detail/sumatifPersenDetail?id=${id}`)
-          .then((res) => setKomonenPenilaian(res.data.datas));
-      } catch (error) {
-        alert("Gagal mengambil data.");
-        console.log(error);
-      }
+  // ✅ Debounce hanya untuk operasi yang mahal (opsional)
+  const handleChangeNilai = useDebouncedCallback(
+    handleChangeNilaiImmediate,
+    150
+  );
+
+  const fetchData = useCallback(async (sumatifId: string) => {
+    try {
+      setIsLoading(true);
+      const [nilaiRes, komponenRes] = await Promise.all([
+        axios.get(`/api/detail/sumatifNilai`, {params:{id:sumatifId, mkId:mkId}}),
+        axios.get(`/api/detail/sumatifPersenDetail`, {params:{id:sumatifId, mkId:mkId}}),
+      ]);
+      setDataNilai(nilaiRes.data.datas);
+      setKomponenPenilaian(komponenRes.data.datas);
+    } catch (error) {
+      console.error(error);
+      alert("Gagal memuat data.");
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [mkId]);
 
-  const handleGetItemSumatif = async (id: string) => {
-    if (router.isReady) {
-      try {
-        await axios
-          .get(`/api/detail/sumatifNilai?id=${id}`)
-          .then((res) => setdataNilai(res.data.datas));
-      } catch (error) {
-        alert("Gagal mengambil data.");
-        console.log(error);
-      }
-    }
-  };
-
-  // Fungsi untuk menyimpan semua nilai
   const handleSaveAllNilai = async () => {
+    if (!dataNilai[0]) return;
     setIsSaving(true);
-    
-    // Susun data dalam format JSON
-    const dataToSave = dataNilai[0]?.KelasMahasiswa.map((item, index) => {
-      const nim = item.KrsDetail.krs.mahasiswa.nim;
-      const namaMhs = item.KrsDetail.krs.mahasiswa.nama_mhs;
-      
-      // Ambil nilai untuk setiap komponen penilaian
-      const nilaiPerKomponen = komonenPenilaian.map((komponen, i) => ({
-        komponen_id: komponen.id,
+
+    const dataToSave = dataNilai[0].mahasiswa.map((mhs, index) => ({
+      nim: mhs.nim,
+      nama_mahasiswa: mhs.nama,
+      mkId,
+      sumatif_id: id,
+      nilai_komponen: dataNilai[0].mahasiswa[0].nilai.map((komponen, i) => ({
+        komponen_id: komponen.sumatifId,
         komponen_nama: komponen.nama,
-        nilai: nilai[`${index}-${i}`] ?? item.KrsDetail.KhsDetail[0]?.nilai ?? 0,
-        khs_detail_id: item.KrsDetail.KhsDetail[0]?.id
-      }));
+        nilai: nilai[`${index}-${i}`] ?? mhs.nilai[i]?.nilai ?? 0,
+        khs_detail_id: mhs.nilai[i]?.id,
+      })),
+    }));
 
-      return {
-        nim: nim,
-        nama_mahasiswa: namaMhs,
-        mkId: mkId,
-        sumatif_id: id,
-        nilai_komponen: nilaiPerKomponen
-      };
-    });
 
-    console.log("Data yang akan disimpan:", JSON.stringify(dataToSave, null, 2));
 
     try {
-      // Kirim ke API
-       await axios.put('/api/penilaian', {
-        data_nilai: dataToSave
-      });
-      
+      await axios.put("/api/penilaian", { data_nilai: dataToSave });
       alert("Data berhasil disimpan!");
       setIsEditMode(false);
       setNilai({});
-      
-      // Refresh data
-      handleGetItemSumatif(id as string);
+      if (id) fetchData(id as string);
     } catch (error) {
-      alert("Gagal menyimpan data.");
       console.error(error);
+      alert("Gagal menyimpan data.");
     } finally {
       setIsSaving(false);
     }
   };
 
+const handleDownloadNilai = async () => {
+  try {
+    await axios.get(`/api/pdf/route`, {params:{id:id, mkId:mkId}});
+  } catch (error) {
+    console.log(error)
+  }
+}
+
   useEffect(() => {
     if (router.isReady && id) {
-      handleGetItemSumatif(id as string);
-      handleGetKomponen();
+      fetchData(id as string);
     }
-  }, [router.isReady, id]);
+  }, [router.isReady, id, fetchData]);
+
+  if (isLoading) return <h1 className="text-gray-500">Memuat data...</h1>;
+  console.log("ini data nilai", dataNilai)
 
   return (
     <div className="mt-10">
-      {dataNilai ? (
-        <div className="p-10 bg-white shadow-lg w-3xl">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-700">Penilaian {toPascalCase(nama as string)}</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsEditMode(!isEditMode)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md ${
-                  isEditMode
-                    ? "bg-gray-500 hover:bg-gray-600 text-white"
-                    : "bg-yellow-500 hover:bg-yellow-600 text-white"
-                }`}
-              >
-                <Pen className="h-5 w-5" />
-                {isEditMode ? "Batal Edit" : "Edit Semua"}
+      <div className="p-10 bg-white shadow-lg w-3xl">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-700">
+            Penilaian Mahasiswa
+          </h2>
+          <div className="flex gap-2">
+            {!isEditMode && (
+              <button className="bg-blue-500 cursor-pointer" onClick={handleDownloadNilai}>
+                Pdf
               </button>
-              {isEditMode && (
-                <button
-                  onClick={handleSaveAllNilai}
-                  disabled={isSaving}
-                  className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
-                >
-                  <Save className="h-5 w-5" />
-                  {isSaving ? "Menyimpan..." : "Simpan Semua"}
-                </button>
-              )}
-            </div>
+            )}
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md ${
+                isEditMode
+                  ? "bg-gray-500 hover:bg-gray-600 text-white"
+                  : "bg-yellow-500 hover:bg-yellow-600 text-white"
+              }`}
+            >
+              <Pen className="h-5 w-5" />
+              {isEditMode ? "Batal Edit" : "Edit Semua"}
+            </button>
+            {isEditMode && (
+              <button
+                onClick={handleSaveAllNilai}
+                disabled={isSaving}
+                className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md disabled:opacity-50"
+              >
+                <Save className="h-5 w-5" />
+                {isSaving ? "Menyimpan..." : "Simpan Semua"}
+              </button>
+            )}
           </div>
-
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-100 text-gray-500 font-normal">
-                <th className="pt-2 px-4">No</th>
-                <th className="px-4">NIM</th>
-                <th className="px-4">Nama Mahasiswa</th>
-                {komonenPenilaian.map((item, i) => (
-                  <th className="px-4" key={i}>
-                    {item.nama}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dataNilai[0]?.KelasMahasiswa.map((item, index) => {
-                const colorClass = colors[index % colors.length];
-                return (
-                  <tr
-                    key={index}
-                    className="border-b-2 border-gray-100 text-gray-700 text-base"
-                  >
-                    <td className="p-2 text-center">{index + 1}</td>
-                    <td>
-                      <h1
-                        className={`w-fit h-fit py-1 px-3 text-xs rounded-full font-semibold ${colorClass}`}
-                      >
-                        {item.KrsDetail.krs.mahasiswa.nim}
-                      </h1>
-                    </td>
-                    <td>
-                      {capitalizeWords(item.KrsDetail.krs.mahasiswa.nama_mhs)}
-                    </td>
-                    {komonenPenilaian.map((items, i) => {
-                      const currentValue = nilai[`${index}-${i}`] ?? item.KrsDetail.KhsDetail[0]?.nilai ?? 0;
-                      return (
-                        <td key={i} className="p-2 text-center">
-                          {isEditMode ? (
-                            <input
-                              type="number"
-                              value={currentValue}
-                              onChange={(e) =>
-                                setNilai({
-                                  ...nilai,
-                                  [`${index}-${i}`]: Number(e.target.value),
-                                })
-                              }
-                              className="border border-gray-300 rounded p-1 w-16 text-center"
-                              min="0"
-                              max="100"
-                            />
-                          ) : (
-                            currentValue
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
-      ) : (
-        <h1>Memuat data...</h1>
-      )}
+
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-100 text-gray-500 font-normal">
+              <th className="pt-2 px-4">No</th>
+              <th className="px-4">NIM</th>
+              <th className="px-4">Nama Mahasiswa</th>
+              {dataNilai[0]?.mahasiswa[0].nilai.map((item, i) => (
+                <th className="px-4" key={i}>
+                  {item.nama}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {dataNilai[0]?.mahasiswa.map((item, index) => (
+              <TableRow
+                key={item.nim}
+                item={item}
+                index={index}
+                isEditMode={isEditMode}
+                handleChangeNilai={handleChangeNilai}
+                nilaiState={nilai}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

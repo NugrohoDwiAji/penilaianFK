@@ -7,7 +7,7 @@ type props = {
     namaKelas: string
 namaDosen: string
 nikDosen: string
-tanggal: string
+tanggal?: string
 isDelete?: boolean
 isEdit:()=>void
 isSee:()=>void

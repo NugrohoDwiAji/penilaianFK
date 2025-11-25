@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import axios from "axios";
 import TipeKelas from "@/components/datas/tipeKelas.json";
-import { constants } from "fs/promises";
+import { useCallback } from "react";
 
 type Props = {
   onClick: () => void;
@@ -21,8 +21,8 @@ type DataDosen = {
 };
 
 type DataMhs = {
-  id_mhs: string;
-  nama_mhs: string;
+  id: string;
+  nama: string;
   nim: string;
   created_at: string;
   upate_at: string;
@@ -50,7 +50,7 @@ export default function FlyerKelas({ onClick, mataKuliah, kurikulum, mkId }: Pro
   const [isDosen, setIsDosen] = useState(true);
   const [dataDosen, setDataDosen] = useState<DataDosen[]>([]);
   const [dataMhs, setDataMhs] = useState<DataMhs[]>([]);
-  const [dataSumatif, setDataSumatif] = useState<DataSumatif[]>([])
+  const [dataSumatif, setDataSumatif] = useState<DataSumatif []>([])
   const [namaKelasFirst, setNamaKelasFirst] = useState("")
   const [namaKelasSecond, setNamaKelasSecond] = useState("")
 
@@ -114,23 +114,23 @@ export default function FlyerKelas({ onClick, mataKuliah, kurikulum, mkId }: Pro
     }
   };
 
-  const handleGetDataSumatif = async () => {
+  const handleGetDataSumatif = useCallback(async () => {
     try {
     await axios.get(`/api/sumatifPersen?mkId=${mkId}`).then((res) => setDataSumatif(res.data.datas));
     } catch (error) {
       alert("Gagal mengambil data.");
       console.log(error);
     }
-  };
+  },[mkId]);
 
-  const handleGetDataMhs = async () => {
+  const handleGetDataMhs = useCallback(async () => {
     try {
-      const result = await axios.get("/api/mahasiswa");
+      const result = await axios.get(`/api/detail/mahasiswa?id=${mkId}`);
       setDataMhs(result.data.datas);
     } catch (error) {
       console.log(error);
     }
-  };
+  },[mkId]);
 
   const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault(); 
@@ -171,29 +171,26 @@ export default function FlyerKelas({ onClick, mataKuliah, kurikulum, mkId }: Pro
 
 
   // fungsi untuk menentukan data mana yang akan dirender
-  const getRenderableData = (items: DataSumatif[]): DataSumatif[] => {
+  const getRenderableData = (items: DataSumatif[]): DataSumatif [] => {
     const hasil: DataSumatif[] = [];
     for (const item of items) {
       if (item.children && item.children.length > 0) {
         hasil.push(...item.children); // render children-nya
       } else {
-        hasil.push(item); // jika tidak punya children, render parentnya
+       return hasil; // jika tidak punya children, render parentnya
       }
     }
     return hasil;
   };
 
-
-
   useEffect(() => {
     handleGetDosen();
     handleGetDataMhs();
     handleGetDataSumatif();
-  }, []);
+  }, [handleGetDataMhs, handleGetDataSumatif]);
 
   const renderDataSumatif = getRenderableData(dataSumatif);
 
-  console.log(renderDataSumatif)
 
   return (
     <div className="w-3xl min-h-52 bg-white absolute p-5 shadow-2xl rounded-lg">
@@ -212,8 +209,9 @@ export default function FlyerKelas({ onClick, mataKuliah, kurikulum, mkId }: Pro
                 handleSelectA(e);
               }} className="border border-gray-400 p-2 rounded-lg outline-none active:outline-none focus:outline-none focus:ring-2 focus:ring-blue-400/40 ">
               <option value=""> --- Pilih Kelas --- </option>
+              <option value="nonBlok">Non Blok</option>
               {renderDataSumatif.map((item) => (
-                <option value={item.id} key={item.id} className="">{item.nama}</option>
+                <option value={item?.id} key={item?.id} className="">{item?.nama}</option>
               ))}
             </select>
           </div>
@@ -421,7 +419,7 @@ export default function FlyerKelas({ onClick, mataKuliah, kurikulum, mkId }: Pro
                         {mhs.nim}
                       </span>
                     </td>
-                    <td className="text-center">{mhs.nama_mhs}</td>
+                    <td className="text-center">{mhs.nama}</td>
                   </tr>
                 ))}
               </tbody>

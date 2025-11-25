@@ -28,6 +28,13 @@ type DataKelas = {
   ];
 };
 
+const colors = [
+  "bg-blue-100 text-blue-800",
+  "bg-green-100 text-green-800",
+  "bg-yellow-100 text-yellow-800",
+  "bg-purple-100 text-purple-800",
+];
+
 export default function Kelas() {
   const [mataKuliah, setMataKuliah] = useState<Matakuliah[]>([]);
   const [selectedMk, setselectedMk] = useState<string>("");
@@ -35,6 +42,8 @@ export default function Kelas() {
   const [addKelas, setAddKelas] = useState(false);
   const [kurikulum, setKurikulum] = useState("");
   const [dataKelas, setDataKelas] = useState<DataKelas[]>([]);
+  const [viewPerPage, setviewPerPage] = useState<number>(5);
+  const [currentPage, setcurrentPage] = useState(1);
 
   const handleGetMatakuliah = async () => {
     try {
@@ -66,13 +75,19 @@ export default function Kelas() {
     }
   };
 
+  // pagenation logic
+
+  const startIndex = (currentPage - 1) * viewPerPage;
+  const endIndex = startIndex + viewPerPage;
+  const currentData = mataKuliah.slice(startIndex, endIndex);
+
   useEffect(() => {
     handleGetMatakuliah();
   }, []);
   return (
     <div className="min-h-screen flex ">
       <div className=" w-fit bg-white h-fit p-5">
-        <div className=" h-24 ">
+        <div className="mb-7 ">
           <select
             name=""
             id=""
@@ -87,7 +102,22 @@ export default function Kelas() {
             ))}
           </select>
         </div>
-        <main className="flex gap-5">
+        <main className="flex flex-col gap-3">
+          <div className="flex gap-5 text-gray-700 text-sm">
+            <div className="gap-2 flex">
+              <label htmlFor="">View Perpage</label>
+              <select name="" id="" className="focus:outline-blue-400" onChange={(e)=>setviewPerPage(Number(e.target.value))}>
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={15}>15</option>
+              </select>
+            </div>
+              <h1>Jumlah Matakuliah : {mataKuliah.length}</h1>
+              <h2>
+                Halaman {currentPage} dari{" "}
+                {Math.ceil(currentData.length / viewPerPage)}
+              </h2>
+          </div>
           <table className="">
             <thead className="ring-2 ring-purple-400 rounded-lg text-purple-400">
               <tr>
@@ -98,7 +128,7 @@ export default function Kelas() {
               </tr>
             </thead>
             <tbody className="text-gray-700">
-              {mataKuliah.map((mk, index) => (
+              {currentData.slice(startIndex, endIndex).map((mk, index) => (
                 <tr
                   key={mk.id_mk}
                   className={`${index % 2 === 1 ? "bg-blue-200/30" : ""}`}
@@ -106,10 +136,13 @@ export default function Kelas() {
                   <td className="p-4 border-b-2 border-gray-400/20 text-center">
                     {index + 1}
                   </td>
-                  <td className="p-4  border-b-2 border-gray-400/20 text-center">
+                  <td className={`p-4  border-b-2 border-gray-400/20 text-center  `}>
+                  <h1 className={`h-fit w-fit px-2 py-1 rounded-full ${colors[index % colors.length]}`}>
                     {mk.kode_mk}
+
+                  </h1>
                   </td>
-                  <td className="p-4 border-b-2 border-gray-400/20 text-center">
+                  <td className="p-4 border-b-2 border-gray-400/20 text-start">
                     {mk.nama_matakuliah}
                   </td>
                   <td className="py-4 px-10 border-b-2 border-gray-400/20 flex gap-3">
@@ -119,7 +152,6 @@ export default function Kelas() {
                     >
                       <PenIcon className="w-6 h-6 text-yellow-500" />
                     </button>
-
                   </td>
                 </tr>
               ))}
@@ -145,8 +177,8 @@ export default function Kelas() {
                 nikDosen={kelas.KelasDosen[0].dosen.nik}
                 tanggal={kelas.created_at.split("T")[0]}
                 isDelete={false}
-                isEdit={()=>{}}
-                isSee={()=>{}}
+                isEdit={() => {}}
+                isSee={() => {}}
               />
             ))}
           </div>

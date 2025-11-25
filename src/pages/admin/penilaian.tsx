@@ -52,7 +52,7 @@ type DataKelas = {
       ];
     }
   ];
-  sumatifPersen: {
+  sumatifPersen?: {
     id: string;
     nama: string;
     bobot: number;
@@ -100,9 +100,9 @@ export default function Penilaian() {
 
   return (
     <div className="p-5 ">
-      <div className="bg-white p-5 rounded-xl">
+      <div className="bg-white p-5 rounded-xl w-fit shadow-lg">
         <div className="gap-2 flex items-center">
-          <label htmlFor="">Pilih Matakuliah</label>
+          <label htmlFor="">Matakuliah</label>
           <select
             onChange={(e) => {
               handleGetKelas(e.target.value);
@@ -129,12 +129,12 @@ export default function Penilaian() {
             <CardKelas
               key={kelas.id_kelas}
               idKelas={kelas.id_kelas}
-              namaKelas={kelas.nama_kelas}
+              namaKelas={kelas.sumatifPersen?.nama ? kelas.sumatifPersen?.nama : kelas.matakuliah.nama_matakuliah}
               namaDosen={kelas.KelasDosen[0].dosen.nama_dosen}
               nikDosen={kelas.KelasDosen[0].dosen.nik}
-              tanggal={kelas.sumatifPersen.nama}
+              tanggal={kelas.sumatifPersen?.nama ? kelas.nama_kelas : "Non Blok"}
               isDelete={true}
-              isEdit={() => router.push(`/detail/${kelas.nama_kelas}/${kelas.mkId}/${kelas.sumatifPersen.id}/`)}
+              isEdit={() => router.push(`/detail/${kelas.nama_kelas}/${kelas.mkId}/${kelas.sumatifPersen?.id}/`)}
               isSee={() => {}}
             />
           ))}

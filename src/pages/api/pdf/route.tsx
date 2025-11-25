@@ -1,7 +1,28 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import prisma from "@/services/prisma";
-import { response } from "../componnents/response";
+import { NextResponse } from "next/server";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { NilaiKelas } from "../../../components/NilaiKelas";
 import { Prisma } from "@prisma/client";
+import prisma from "@/services/prisma";
+
+export interface DataSumatifNilai {
+  id_kelas: string;
+  kelas_kelas: string;
+  semester: number;
+  thn_akademik: string;
+  mahasiswa: {
+    nama: string;
+    nim: string;
+    nilai: {
+      id: string;
+      parentid: string | null;
+      sumatifId: string;
+      nama: string;
+      nilai: number;
+    }[];
+  }[];
+}
+
 
 // Ambil semua sumatifPersen sekali saja
 async function getLeafSumatifIds(tx: Prisma.TransactionClient, rootId: string) {
@@ -58,16 +79,18 @@ async function getLeafSumatifIds(tx: Prisma.TransactionClient, rootId: string) {
   return leafIds;
 }
 
-
-const handleGetMethode = async (req: NextApiRequest, res: NextApiResponse) => {
-  const { id, mkId } = req.query;
-
+const handleGetNilai = async (id: string, mkId: string): Promise<DataSumatifNilai[]> => {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const leafIds = await getLeafSumatifIds(tx, id === "undefined" ? mkId as string : id as string);
+      const leafIds = await getLeafSumatifIds(
+        tx,
+        id === "undefined" ? mkId : id
+      );
 
       const data = await tx.kelas.findMany({
-        where: id === "undefined" ? { mkId: mkId as string } : { sumatifPersenId: id as string },
+        where: id === "undefined"
+          ? { mkId }
+          : { sumatifPersenId: id },
         include: {
           KelasMahasiswa: {
             include: {
@@ -97,6 +120,8 @@ const handleGetMethode = async (req: NextApiRequest, res: NextApiResponse) => {
       return data.map((d) => ({
         id_kelas: d.id_kelas,
         kelas_kelas: d.nama_kelas,
+        semester: d.semester,
+        thn_akademik: d.thn_akademik,
         mahasiswa: d.KelasMahasiswa.map((km) => ({
           nama: km.KrsDetail.krs.mahasiswa.nama_mhs,
           nim: km.KrsDetail.krs.mahasiswa.nim,
@@ -106,19 +131,44 @@ const handleGetMethode = async (req: NextApiRequest, res: NextApiResponse) => {
             sumatifId: sn.sumatifPersen.id,
             nama: sn.sumatifPersen.nama,
             nilai: sn.nilai,
-          })),
+          })) ?? [],
         })),
       }));
     });
 
-    response(200, result, "Success", res);
+    return result;
   } catch (error) {
     console.error(error);
-    response(500, error, "Internal server error", res);
+    throw new Error("Gagal mengambil data nilai"); // ✔ throw instead of return
   }
 };
 
+
+async function handleGet(req: NextApiRequest, res: NextApiResponse) {
+  const { id, mkId } = req.query;
+  const hasil = await handleGetNilai(id as string, mkId as string);
+
+  try {
+    const pdfBuffer = await renderToBuffer(
+  <NilaiKelas title="Laporan Nilai Kelas" dataNilai={hasil} />
+);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=kartu-hasil.pdf"
+    );
+    res.status(200).send(pdfBuffer);
+  } catch (error) {
+    console.error("PDF error:", error);
+    return new NextResponse("Error generating PDF", { status: 500 });
+  }
+}
+
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === "GET") return handleGetMethode(req, res);
-  res.status(405).json({ message: "Method not allowed" });
+  if (req.method === "GET") {
+    return handleGet(req, res);
+  } else {
+    res.status(405).json({ message: "Method not allowed" });
+  }
 }
